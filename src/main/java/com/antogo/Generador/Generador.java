@@ -346,7 +346,7 @@ public class Generador {
             }
             Generar_Documentos_Factura_Periodo(cups, mes, consumos.size(), precio_total_periodo, precio_total_periodo + total_impuestos, ((double) consumo_total_periodo) / 1000, precios_dia, consumos_dia);
         } catch (Exception e) {
-            e.printStackTrace();
+            //System.out.println("No hay consumos en ese mes");
         }
     }
 

@@ -241,8 +241,13 @@ public class App {
                 }
                 contadorLocal += CantidadADividir;
             }
-            facturas_collection.insertMany(Generador.Facturas);
-            Generador.Facturas = new ArrayList();
+            try {
+            	facturas_collection.insertMany(Generador.Facturas);
+                Generador.Facturas = new ArrayList();
+			} catch (Exception e) {
+				System.out.println("No hay facturas para generar.");
+			}
+            
         } else {
             for (int i = 0; i < NumeroFases; i++) {
                 for (int j = contadorLocal; j < contadorLocal + CantidadADividir; j++) {
@@ -256,8 +261,13 @@ public class App {
 
                 Generador.Mostrar_Factura_Periodo(j, mes, false);
             }
-            facturas_collection.insertMany(Generador.Facturas);
-            Generador.Facturas = new ArrayList();
+            try {
+            	facturas_collection.insertMany(Generador.Facturas);
+                Generador.Facturas = new ArrayList();
+			} catch (Exception e) {
+				System.out.println("No hay facturas para generar.");
+			}
+            
         }
     }
 
