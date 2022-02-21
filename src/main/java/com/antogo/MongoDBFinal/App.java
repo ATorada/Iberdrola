@@ -16,30 +16,39 @@ import org.bson.types.ObjectId;
  */
 public class App {
 
+    //Variables
     public static int numeroRegistrosXRound;
     static int contador;
     static int contadorLocal = 0;
 
+    //Crea un índice único en una colección en una field
     public void createUniqueIndex(MongoCollection<Document> collection, String field) {
         Document index = new Document(field, 1);
         collection.createIndex(index, new IndexOptions().unique(true));
     }
 
     public App() {
+        //Cargo las conexiones
         Generador.cargar_conexiones();
+        //Genero los Unique Index
         createUniqueIndex(Generador.cliente_collection, "DNI");
         createUniqueIndex(Generador.contratos_collection, "cups");
+        //Preparo las facturas
         Generador.preparar_facturas();
+        //Genero las tasas del año
         Generador.Generar_Tasas_Año();
+        //Establezco el contado en cantidad a los clientes existentes
         contador = (int) Generador.cliente_collection.count();
     }
 
     public static void main(String[] args) {
 
+        //Llamo a la interfaz
         PrimerInsertUI piui = new PrimerInsertUI(null, false);
         numeroRegistrosXRound = 500000;
         piui.setVisible(true);
 
+        //Tests
         //insertar_N(1000000);
         //insertar_N(10);
         //for (int i = 0; i < 31; i++) {
@@ -59,18 +68,22 @@ public class App {
     }
 
     /**
+     * Método que inserta N cantidad de Registros
      *
      * @param cantidadRegistros
      */
     public static void Primer_Genera_Inserta_N(int cantidadRegistros) {
 
+        //Hace un generador que genera X cantidad de registros y base a un contador
         Generador generador = new Generador(cantidadRegistros, contador);
+        //Los genera y guarda
         ArrayList<ArrayList<Document>> primerinsert = generador.generar_primerinsert();
         ArrayList<Document> clientes = primerinsert.get(0);
         //ArrayList<Document> consumos = primerinsert.get(1);
         ArrayList<Document> contratos = primerinsert.get(1); //2
         int contadorClientes = 0;
         int contadorContratos = 0;
+        //Los inserta
         try {
             Generador.cliente_collection.insertMany(clientes);
         } catch (Exception e) {
@@ -87,6 +100,7 @@ public class App {
         System.out.println("Se han insertado " + cantidadRegistros + " contratos");
         contador += cantidadRegistros;
 
+        //En caso de que no se haya podido añadir un DNI/Contrato porque fue borrado, he ido aumentando una variable y se crean tantos inserts como esa variable
         if (contadorClientes > 0 || contadorContratos > 0) {
             Generador generadorClientes = new Generador(contadorClientes, Integer.parseInt(Generador.cliente_collection.find().sort(new BasicDBObject("_id", -1)).first().get("DNI").toString().split("I")[1]) + 1);
             ArrayList<ArrayList<Document>> insertDocs = generadorClientes.generar_primerinsert();
@@ -104,6 +118,7 @@ public class App {
     }
 
     /**
+     * Método que se encarga de insertar las facturas de un mes
      *
      * @param mes
      */
@@ -113,12 +128,16 @@ public class App {
 
         int CantidadADividir;
 
+        //Establece la cantidad para generar el número de iteraciones
         if (NumeroAGenerar >= numeroRegistrosXRound) {
             CantidadADividir = numeroRegistrosXRound;
         } else {
             CantidadADividir = NumeroAGenerar;
         }
+        //Conecto con la collección facturas @Deprecates
         MongoCollection<Document> facturas_collection = Generador.mongo_database.getCollection("facturas");
+        //Switch que conecta consumos_collection al mes del que queramos generar las facturas en base al mes introducido
+        //Y las vacía
         switch (mes) {
             case 0:
                 Generador.consumos_collection = Generador.mongo_database.getCollection("consumo_enero");
@@ -231,9 +250,11 @@ public class App {
                 break;
         }
 
+        //Se obtiene el número de iteraciones
         int NumeroFases = NumeroAGenerar / CantidadADividir;
 
         int contadorLocal = 0;
+        //Si el módulo es cero, se insertarán las facturas del mes
         if (NumeroAGenerar % NumeroFases == 0) {
             for (int i = 0; i < NumeroFases; i++) {
                 for (int j = contadorLocal; j < contadorLocal + CantidadADividir; j++) {
@@ -242,12 +263,13 @@ public class App {
                 contadorLocal += CantidadADividir;
             }
             try {
-            	facturas_collection.insertMany(Generador.Facturas);
+                facturas_collection.insertMany(Generador.Facturas);
                 Generador.Facturas = new ArrayList();
-			} catch (Exception e) {
-				System.out.println("No hay facturas para generar.");
-			}
-            
+            } catch (Exception e) {
+                System.out.println("No hay facturas para generar.");
+            }
+
+            //Si el módulo no es cero se insertarán las facturas de un mes y las no añadidas en la cantidad de iteraciones
         } else {
             for (int i = 0; i < NumeroFases; i++) {
                 for (int j = contadorLocal; j < contadorLocal + CantidadADividir; j++) {
@@ -262,20 +284,24 @@ public class App {
                 Generador.Mostrar_Factura_Periodo(j, mes, false);
             }
             try {
-            	facturas_collection.insertMany(Generador.Facturas);
+                facturas_collection.insertMany(Generador.Facturas);
                 Generador.Facturas = new ArrayList();
-			} catch (Exception e) {
-				System.out.println("No hay facturas para generar.");
-			}
-            
+            } catch (Exception e) {
+                System.out.println("No hay facturas para generar.");
+            }
+
         }
     }
 
     /**
+     * Método que inserta N registros
      *
      * @param NumeroAGenerar
      */
     public static void insertar_N(int NumeroAGenerar) {
+
+        //Obtiene el número a generar y establece la cantidad a dividir para generar las iteraciones
+        //De normal numeroRegistrosXRound son 500000
         int CantidadADividir;
 
         if (NumeroAGenerar >= numeroRegistrosXRound) {
@@ -284,12 +310,15 @@ public class App {
             CantidadADividir = NumeroAGenerar;
         }
 
+        //Obtiene el número de iteraciones
         int NumeroFases = NumeroAGenerar / CantidadADividir;
 
+        //Si el módulo es cero inserta la cantidad
         if (NumeroAGenerar % CantidadADividir == 0) {
             for (int i = 0; i < NumeroFases; i++) {
                 Primer_Genera_Inserta_N(CantidadADividir);
             }
+            //Sino es cero inserta la cantidad y la restante
         } else {
             for (int i = 0; i < NumeroFases; i++) {
                 Primer_Genera_Inserta_N(CantidadADividir);
@@ -299,14 +328,19 @@ public class App {
     }
 
     /**
+     * Método que inserta uun día a todos los registros en base a un mes
+     * introducido
      *
      * @param mes
      */
     public static void insertarUnDia(String mes) {
 
+        //Conecta con el mes
         Generador.consumos_collection = Generador.mongo_database.getCollection(mes);
 
+        //Si no hay cero consumos en ese mes, se añaden a los consumos existentes
         if (Generador.consumos_collection.count() != 0) {
+            //Establece la cantidad a dividir para generar iteraciones
             contadorLocal = 0;
             int CantidadADividir;
             if (Generador.consumos_collection.count() >= numeroRegistrosXRound) {
@@ -315,18 +349,22 @@ public class App {
                 CantidadADividir = (int) Generador.consumos_collection.count();
             }
             int NumeroFases = (int) (Generador.consumos_collection.count() / CantidadADividir);
+            //Si el módulo es 0, genera los update
             if (Generador.consumos_collection.count() % CantidadADividir == 0) {
                 for (int i = 0; i < NumeroFases; i++) {
                     Genera_Inserta_Dia_Consumo(CantidadADividir, mes);
                 }
+                //Si el módulo no es 0, genera los update y los restantes
             } else {
                 for (int i = 0; i < NumeroFases; i++) {
                     Genera_Inserta_Dia_Consumo(CantidadADividir, mes);
                 }
                 Genera_Inserta_Dia_Consumo((int) (Generador.consumos_collection.count() % CantidadADividir), mes);
             }
+            //Si hay 0 consumos inserta un consumo en cada documento
         } else {
             contadorLocal = 0;
+            //Establece la cantidad a Dividir para generar las iteraciones
             int CantidadADividir;
             if (Generador.cliente_collection.count() >= numeroRegistrosXRound) {
                 CantidadADividir = numeroRegistrosXRound;
@@ -334,10 +372,12 @@ public class App {
                 CantidadADividir = (int) Generador.cliente_collection.count();
             }
             int NumeroFases = (int) (Generador.cliente_collection.count() / CantidadADividir);
+            //Si el módulo es 0, entonces inserta el nuevo consumo
             if (Generador.cliente_collection.count() % CantidadADividir == 0) {
                 for (int i = 0; i < NumeroFases; i++) {
                     Insertar_Mes_Nuevo(CantidadADividir, mes);
                 }
+                //Si no es 0, inserta el nuevo consumo y los restantes
             } else {
                 for (int i = 0; i < NumeroFases; i++) {
                     Insertar_Mes_Nuevo(CantidadADividir, mes);
@@ -349,6 +389,8 @@ public class App {
     }
 
     /**
+     * Método que inserta un mes nuevo en base a una cantidad de registros y en
+     * base a un mes
      *
      * @param cantidadRegistros
      * @param mes
@@ -356,14 +398,18 @@ public class App {
     public static void Insertar_Mes_Nuevo(int cantidadRegistros, String mes) {
 
         //int contadorLocal = 0;
+        //Se crea el generador
         Generador generador = new Generador(cantidadRegistros, contador);
+        //Se establece la colección
         Generador.consumos_collection = Generador.mongo_database.getCollection(mes);
+        //Se generan los consumos y se obtienen los contratos
         ArrayList<Document> consumos = generador.generar_consumos();
         ArrayList<Document> contratos = generador.obtener_contatos(contadorLocal);
         contadorLocal += numeroRegistrosXRound;
         Generador.consumos_collection.insertMany(consumos);
 
         int contadorLocal = 0;
+        //A los documentos obtenidos se les añade el consumo
         for (Document contrato : contratos) {
             Document listItem = new Document("consumo_mes", new BasicDBObject("_id", new ObjectId(consumos.get(contadorLocal).get("_id").toString())));
             Document updateQuery = new Document("$push", listItem);
@@ -374,20 +420,26 @@ public class App {
     }
 
     /**
+     * Método que genera e inserta un día de consumo en base a una cantidad de
+     * registros y un mes
      *
      * @param cantidadRegistros
      * @param mes
      */
     public static void Genera_Inserta_Dia_Consumo(int cantidadRegistros, String mes) {
 
+        //Instancia un generador
         Generador generador = new Generador(cantidadRegistros, contadorLocal);
+        //Establece las cnatidades
         Generador.cantidad = cantidadRegistros;
         Generador.consumos_collection = Generador.mongo_database.getCollection(mes);
+        //Obtiene los updates y los documentos
         ArrayList<ArrayList<Document>> updatesDiarios = generador.generar_updatesDiarios(contadorLocal);
         ArrayList<Document> documentos = updatesDiarios.get(0);
         ArrayList<Document> updates = updatesDiarios.get(1);
         contadorLocal += numeroRegistrosXRound;
         int updateContador = 0;
+        //Los actualiza
         for (Document document : documentos) {
             //System.out.println(document);
             List<Document> cantidadDias = (List<Document>) document.get("consumo_fecha");
@@ -398,6 +450,11 @@ public class App {
             }
         }
 
+    }
+
+    //Método que limpia la Base de Datos
+    public void limpiarBBDD() {
+        Generador.mongo_database.drop();
     }
 
 }
